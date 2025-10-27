@@ -13,37 +13,82 @@ const participation = ref(3);
 const shout = ref(false);
 const notes = ref('');
 const result = ref('');
+const submitting = ref(false);
 
 async function submitForm() {
-  const scores = {
-    Attention: attention.value,
-    Obedience: obedience.value,
-    Attitude: attitude.value,
-    Participation: participation.value
-  };
-  const { data } = await api(store.token).post('/api/behavior', {
-    studentCode: studentCode.value,
-    raterCode: raterCode.value,
-    scores,
-    shoutOut: shout.value,
-    notes: notes.value
-  });
-  result.value = `Awarded ${data.points} points. New balance: ${data.balance}`;
+  submitting.value = true;
+  try {
+    const scores = {
+      Attention: attention.value,
+      Obedience: obedience.value,
+      Attitude: attitude.value,
+      Participation: participation.value
+    };
+    const { data } = await api(store.token).post('/api/behavior', {
+      studentCode: studentCode.value,
+      raterCode: raterCode.value,
+      scores,
+      shoutOut: shout.value,
+      notes: notes.value
+    });
+    result.value = `Awarded ${data.points} points. New balance: ${data.balance}`;
+  } catch (e: any) {
+    result.value = e?.response?.data?.error || 'Submission failed';
+  } finally {
+    submitting.value = false;
+  }
 }
 </script>
 
 <template>
-  <div style="padding: 16px; max-width: 520px; margin: 0 auto; display:grid; gap:12px;">
-    <h2>Teacher Daily Behavior</h2>
-    <input placeholder="Student code (e.g., ALEX01)" v-model="studentCode" />
-    <input placeholder="Rater code (e.g., RIV01)" v-model="raterCode" />
-    <label>Attention: <input type="range" min="1" max="5" v-model="attention" /></label>
-    <label>Obedience: <input type="range" min="1" max="5" v-model="obedience" /></label>
-    <label>Attitude: <input type="range" min="1" max="5" v-model="attitude" /></label>
-    <label>Participation: <input type="range" min="1" max="5" v-model="participation" /></label>
-    <label><input type="checkbox" v-model="shout" /> Teacher shout-out (+2)</label>
-    <textarea placeholder="Notes (optional)" v-model="notes"></textarea>
-    <button @click="submitForm">Submit</button>
-    <p>{{ result }}</p>
-  </div>
+  <section class="card card--pad" style="max-width: 640px; margin: 0 auto;">
+    <div class="stack">
+      <h2 class="h2">Teacher Daily Behavior</h2>
+      <div>
+        <label class="label">Student code</label>
+        <input class="input" placeholder="ALEX01" v-model="studentCode" />
+      </div>
+      <div>
+        <label class="label">Rater code</label>
+        <input class="input" placeholder="RIV01" v-model="raterCode" />
+      </div>
+
+      <div class="stack">
+        <div>
+          <label class="label">Attention: {{ attention }}</label>
+          <input class="input" type="range" min="1" max="5" v-model="attention" />
+        </div>
+        <div>
+          <label class="label">Obedience: {{ obedience }}</label>
+          <input class="input" type="range" min="1" max="5" v-model="obedience" />
+        </div>
+        <div>
+          <label class="label">Attitude: {{ attitude }}</label>
+          <input class="input" type="range" min="1" max="5" v-model="attitude" />
+        </div>
+        <div>
+          <label class="label">Participation: {{ participation }}</label>
+          <input class="input" type="range" min="1" max="5" v-model="participation" />
+        </div>
+      </div>
+
+      <label class="cluster">
+        <input type="checkbox" v-model="shout" />
+        <span>Teacher shout‑out (+2)</span>
+      </label>
+
+      <div>
+        <label class="label">Notes</label>
+        <textarea class="textarea" rows="3" placeholder="Optional context..." v-model="notes" />
+      </div>
+
+      <button class="btn btn--primary" :disabled="submitting" @click="submitForm">
+        {{ submitting ? 'Submitting...' : 'Submit' }}
+      </button>
+
+      <p class="mt-2" :class="{'text-muted': !result}">
+        {{ result }}
+      </p>
+    </div>
+  </section>
 </template>

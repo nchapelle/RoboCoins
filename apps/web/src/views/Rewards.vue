@@ -7,49 +7,96 @@ const rewards = ref<any[]>([]);
 const studentCode = ref('');
 const proofFile = ref<File | null>(null);
 const message = ref('');
+const redeeming = ref<string | null>(null);
 
 async function loadRewards() {
   rewards.value = (await api(store.token).get('/api/rewards')).data;
 }
 onMounted(loadRewards);
 
-async function onFile(e: Event) {
+function onFile(e: Event) {
   const t = e.target as HTMLInputElement;
   proofFile.value = t.files?.[0] || null;
 }
 
 async function uploadProof(file: File) {
   const contentType = file.type || 'image/jpeg';
-  const { data } = await api(store.token).get('/upload/sign', { params: { type: 'reward', contentType } });
-  await fetch(data.url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file });
+  const { data } = await api(store.token).get('/upload/sign', {
+    params: { type: 'reward', contentType }
+  });
+  if (!data?.url) throw new Error('No signed URL');
+  if (!String(data.url).startsWith('http://localhost-dev-upload')) {
+    await fetch(data.url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file });
+  }
   return data.publicUrl as string;
 }
 
 async function redeem(name: string) {
-  let proofUrl = '';
-  if (proofFile.value) proofUrl = await uploadProof(proofFile.value);
-  const { data } = await api(store.token).post('/api/redeem', {
-    studentCode: studentCode.value,
-    rewardName: name,
-    proofUrl
-  });
-  message.value = `Redeemed. New balance: ${data.balance}`;
+  try {
+    redeeming.value = name;
+    let proofUrl = '';
+    if (proofFile.value) proofUrl = await uploadProof(proofFile.value);
+    const { data } = await api(store.token).post('/api/redeem', {
+      studentCode: studentCode.value,
+      rewardName: name,
+      proofUrl
+    });
+    message.value = `Redeemed. New balance: ${data.balance}`;
+    await loadRewards();
+  } catch (e: any) {
+    message.value = e?.response?.data?.error || 'Redemption failed';
+  } finally {
+    redeeming.value = null;
+  }
 }
 </script>
 
 <template>
-  <div style="padding: 16px; max-width: 900px; margin: 0 auto;">
-    <h2>Rewards Store</h2>
-    <input placeholder="Student code" v-model="studentCode" />
-    <input type="file" accept="image/*" @change="onFile" />
-    <div style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top:12px;">
-      <div v-for="r in rewards" :key="r.id" style="border:1px solid #ddd; padding:12px;">
-        <img v-if="r.photoUrl" :src="r.photoUrl" style="width:100%; height:140px; object-fit:cover;" />
-        <h4>{{ r.name }}</h4>
-        <p>Cost: {{ r.cost }} | Stock: {{ r.inventory }}</p>
-        <button :disabled="r.inventory<=0" @click="redeem(r.name)">Redeem</button>
+  <div class="stack">
+    <h2 class="h2">Rewards Store</h2>
+
+    <section class="card card--pad" style="max-width: 900px; margin: 0 auto;">
+      <div class="stack">
+        <div class="cluster" style="gap: var(--space-4);">
+          <div style="flex: 1;">
+            <label class="label">Student code</label>
+            <input class="input" placeholder="ALEX01" v-model="studentCode" />
+          </div>
+          <div style="flex: 1;">
+            <label class="label">Proof photo (optional)</label>
+            <input class="input" type="file" accept="image/*" @change="onFile" />
+          </div>
+        </div>
+
+        <div class="grid mt-4">
+          <div v-for="r in rewards" :key="r.id" class="card card--pad">
+            <div class="stack">
+              <img
+                v-if="r.photoUrl"
+                :src="r.photoUrl"
+                alt=""
+                style="width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius-md);"
+              />
+              <div class="cluster" style="justify-content: space-between;">
+                <h3 class="h3" style="margin: 0;">{{ r.name }}</h3>
+                <span class="badge">Cost: {{ r.cost }}</span>
+              </div>
+              <div class="cluster" style="justify-content: space-between;">
+                <span class="text-muted">Stock: {{ r.inventory }}</span>
+                <button
+                  class="btn btn--primary"
+                  :disabled="r.inventory <= 0 || !studentCode"
+                  @click="redeem(r.name)"
+                >
+                  {{ redeeming === r.name ? 'Processing...' : r.inventory <= 0 ? 'Out of stock' : 'Redeem' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mt-2" :class="{'text-muted': !message}">{{ message }}</p>
       </div>
-    </div>
-    <p style="margin-top: 12px;">{{ message }}</p>
+    </section>
   </div>
 </template>

@@ -7,7 +7,6 @@ const password = ref('');
 const name = ref('');
 const orgName = ref('');
 const orgSlug = ref('');
-
 const store = useAuth();
 
 async function register() {
@@ -31,17 +30,31 @@ async function login() {
 </script>
 
 <template>
-  <div style="max-width: 480px; margin: 32px auto; display:grid; gap:8px;">
-    <h2>Login / Register</h2>
-    <input placeholder="Email" v-model="email" />
-    <input placeholder="Password" type="password" v-model="password" />
-    <details>
-      <summary>Register new org</summary>
-      <input placeholder="Your Name" v-model="name" />
-      <input placeholder="Org Name" v-model="orgName" />
-      <input placeholder="Org Slug" v-model="orgSlug" />
-      <button @click="register">Register</button>
-    </details>
-    <button @click="login">Login</button>
+  <div class="center" style="min-height: calc(100vh - 64px);">
+    <div class="card card--pad" style="width: 100%; max-width: 440px;">
+      <div class="stack">
+        <h2 class="h2">Welcome back</h2>
+        <div>
+          <label class="label">Email</label>
+          <input class="input" v-model="email" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label class="label">Password</label>
+          <input class="input" type="password" v-model="password" placeholder="••••••••" />
+        </div>
+        <div class="cluster" style="justify-content: space-between;">
+          <button class="btn btn--primary" @click="login">Sign in</button>
+          <details>
+            <summary class="badge">Create new org</summary>
+            <div class="stack mt-2">
+              <input class="input" placeholder="Your name" v-model="name" />
+              <input class="input" placeholder="Org name" v-model="orgName" />
+              <input class="input" placeholder="Org slug" v-model="orgSlug" />
+              <button class="btn btn--secondary" @click="register">Register</button>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

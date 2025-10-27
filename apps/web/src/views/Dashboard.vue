@@ -6,6 +6,7 @@ const store = useAuth();
 const students = ref<any[]>([]);
 const rewards = ref<any[]>([]);
 
+// form fields
 const studentName = ref('');
 const studentCode = ref('');
 const raterName = ref('');
@@ -30,6 +31,8 @@ async function addStudent() {
     code: studentCode.value
   });
   students.value.unshift(data);
+  studentName.value = '';
+  studentCode.value = '';
 }
 async function addRater() {
   await api(store.token).post('/api/raters', {
@@ -37,12 +40,16 @@ async function addRater() {
     code: raterCode.value,
     role: 'Teacher'
   });
+  raterName.value = '';
+  raterCode.value = '';
 }
 async function addChore() {
   await api(store.token).post('/api/chores', {
     name: choreName.value,
     defaultPoints: chorePoints.value
   });
+  choreName.value = '';
+  chorePoints.value = 1;
 }
 async function addReward() {
   await api(store.token).post('/api/rewards', {
@@ -51,51 +58,100 @@ async function addReward() {
     inventory: rewardInventory.value,
     visibility: 'Private'
   });
-  rewards.value = (await api(store.token).get('/api/rewards')).data;
+  const a = api(store.token);
+  rewards.value = (await a.get('/api/rewards')).data;
+  rewardName.value = '';
+  rewardCost.value = 5;
+  rewardInventory.value = 5;
 }
 </script>
 
 <template>
-  <div style="padding: 16px; display:grid; gap:16px;">
-    <h2>Dashboard</h2>
-    <p v-if="!store.token">Please log in.</p>
+  <div class="stack">
+    <h2 class="h2">Dashboard</h2>
+    <p v-if="!store.token" class="text-muted">
+      Please log in to manage students, raters, chores, and rewards.
+    </p>
 
-    <div v-else style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-      <div style="border:1px solid #ddd; padding:12px;">
-        <h3>Students</h3>
-        <input placeholder="Name" v-model="studentName" />
-        <input placeholder="Code (e.g., ALEX01)" v-model="studentCode" />
-        <button @click="addStudent">Add Student</button>
-        <ul>
-          <li v-for="s in students" :key="s.id">{{ s.name }} — code: {{ s.code }} — balance: {{ s.pointsBal }}</li>
-        </ul>
-      </div>
+    <div v-else class="grid">
+      <section class="card card--pad">
+        <h3 class="h3">Students</h3>
+        <div class="stack mt-2">
+          <div>
+            <label class="label">Name</label>
+            <input class="input" placeholder="Alex Johnson" v-model="studentName" />
+          </div>
+          <div>
+            <label class="label">Code</label>
+            <input class="input" placeholder="ALEX01" v-model="studentCode" />
+          </div>
+          <button class="btn btn--primary" @click="addStudent">Add Student</button>
+        </div>
+        <table class="table mt-4" v-if="students.length">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in students" :key="s.id">
+              <td>{{ s.name }}</td>
+              <td><span class="badge">{{ s.code }}</span></td>
+              <td>{{ s.pointsBal }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="text-muted mt-4">No students yet.</p>
+      </section>
 
-      <div style="border:1px solid #ddd; padding:12px;">
-        <h3>Raters</h3>
-        <input placeholder="Name" v-model="raterName" />
-        <input placeholder="Code (e.g., RIV01)" v-model="raterCode" />
-        <button @click="addRater">Add Rater</button>
-        <p>Add your teacher and share only the code with them.</p>
-      </div>
+      <section class="card card--pad">
+        <h3 class="h3">Raters</h3>
+        <div class="stack mt-2">
+          <div>
+            <label class="label">Name</label>
+            <input class="input" placeholder="Ms. Rivera" v-model="raterName" />
+          </div>
+          <div>
+            <label class="label">Code</label>
+            <input class="input" placeholder="RIV01" v-model="raterCode" />
+          </div>
+          <button class="btn btn--secondary" @click="addRater">Add Rater</button>
+          <p class="text-muted">Share codes with teachers; no login required for them in MVP.</p>
+        </div>
+      </section>
 
-      <div style="border:1px solid #ddd; padding:12px;">
-        <h3>Chores</h3>
-        <input placeholder="Chore name" v-model="choreName" />
-        <input type="number" placeholder="Default points" v-model="chorePoints" />
-        <button @click="addChore">Add Chore</button>
-      </div>
+      <section class="card card--pad">
+        <h3 class="h3">Chores</h3>
+        <div class="stack mt-2">
+          <div>
+            <label class="label">Chore name</label>
+            <input class="input" placeholder="Dishwasher" v-model="choreName" />
+          </div>
+          <div>
+            <label class="label">Default points</label>
+            <input class="input" type="number" min="0" v-model.number="chorePoints" />
+          </div>
+          <button class="btn btn--secondary" @click="addChore">Add Chore</button>
+        </div>
+      </section>
 
-      <div style="border:1px solid #ddd; padding:12px;">
-        <h3>Rewards</h3>
-        <input placeholder="Reward name" v-model="rewardName" />
-        <input type="number" placeholder="Cost" v-model="rewardCost" />
-        <input type="number" placeholder="Inventory" v-model="rewardInventory" />
-        <button @click="addReward">Add Reward</button>
-        <ul>
-          <li v-for="r in rewards" :key="r.id">{{ r.name }} — cost: {{ r.cost }} — stock: {{ r.inventory }}</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</template>
+      <section class="card card--pad">
+        <h3 class="h3">Rewards</h3>
+        <div class="stack mt-2">
+          <div>
+            <label class="label">Reward name</label>
+            <input class="input" placeholder="Choose Movie Night" v-model="rewardName" />
+          </div>
+          <div class="cluster">
+            <div style="flex:1;">
+              <label class="label">Cost</label>
+              <input class="input" type="number" min="0" v-model.number="rewardCost" />
+            </div>
+            <div style="flex:1;">
+              <label class="label">Inventory</label>
+              <input class="input" type="number" min="0" v-model.number="rewardInventory" />
+            </div>
+          </div>
+          <button class="btn
