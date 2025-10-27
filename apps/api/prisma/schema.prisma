@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Org {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  settings    Json?
+  members     OrgMember[]
+  students    Student[]
+  raters      Rater[]
+  categories  Category[]
+  behaviors   BehaviorEntry[]
+  chores      Chore[]
+  choreLogs   ChoreLog[]
+  rewards     Reward[]
+  redemptions Redemption[]
+  ledger      PointLedger[]
+  createdAt   DateTime        @default(now())
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  password  String
+  name      String
+  members   OrgMember[]
+  // back-relation for Rater.user
+  raters    Rater[]     @relation("RaterUser")
+  createdAt DateTime    @default(now())
+}
+
+model OrgMember {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  role      String // Owner, Parent, Teacher, Student, Rater
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, userId])
+}
+
+model Student {
+  id          String          @id @default(cuid())
+  org         Org             @relation(fields: [orgId], references: [id])
+  orgId       String
+  name        String
+  code        String          @unique
+  avatarUrl   String?
+  grade       String?
+  pointsBal   Int             @default(0)
+  behaviors   BehaviorEntry[]
+  choreLogs   ChoreLog[]
+  redemptions Redemption[]
+  ledger      PointLedger[]
+  createdAt   DateTime        @default(now())
+}
+
+model Rater {
+  id    String @id @default(cuid())
+  org   Org    @relation(fields: [orgId], references: [id])
+  orgId String
+
+  // optional link to a User
+  user   User?   @relation("RaterUser", fields: [userId], references: [id])
+  userId String?
+
+  name      String
+  code      String          @unique
+  role      String // Teacher, Parent, Peer
+  email     String?
+  active    Boolean         @default(true)
+  behaviors BehaviorEntry[]
+  createdAt DateTime        @default(now())
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  name      String
+  scaleMin  Int      @default(1)
+  scaleMax  Int      @default(5)
+  weight    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, name])
+}
+
+model BehaviorEntry {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  rater     Rater    @relation(fields: [raterId], references: [id])
+  raterId   String
+  date      DateTime
+  scores    Json // { categoryId: value }
+  notes     String?
+  shoutOut  Boolean  @default(false)
+  total     Int
+  points    Int
+  createdAt DateTime @default(now())
+}
+
+model Chore {
+  id            String   @id @default(cuid())
+  org           Org      @relation(fields: [orgId], references: [id])
+  orgId         String
+  name          String
+  defaultPoints Int
+  photoUrl      String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  // back-relation for ChoreLog.chore
+  logs ChoreLog[]
+
+  @@unique([orgId, name])
+}
+
+model ChoreLog {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  chore     Chore    @relation(fields: [choreId], references: [id])
+  choreId   String
+  date      DateTime
+  points    Int
+  photoUrl  String?
+  verified  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  org         Org      @relation(fields: [orgId], references: [id])
+  orgId       String
+  name        String
+  description String?
+  photoUrl    String?
+  cost        Int
+  inventory   Int      @default(0)
+  active      Boolean  @default(true)
+  visibility  String   @default("Private") // Private, Public
+  createdAt   DateTime @default(now())
+
+  // back-relation for Redemption.reward
+  redemptions Redemption[]
+
+  @@unique([orgId, name])
+}
+
+model Redemption {
+  id        String   @id @default(cuid())
+  org       Org      @relation(fields: [orgId], references: [id])
+  orgId     String
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+  reward    Reward   @relation(fields: [rewardId], references: [id])
+  rewardId  String
+  date      DateTime
+  points    Int
+  status    String   @default("Approved") // Requested, Approved, Fulfilled, Rejected
+  proofUrl  String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model PointLedger {
+  id           String   @id @default(cuid())
+  org          Org      @relation(fields: [orgId], references: [id])
+  orgId        String
+  student      Student  @relation(fields: [studentId], references: [id])
+  studentId    String
+  sourceType   String // behavior|chore|bonus|adjustment|redemption
+  sourceId     String
+  delta        Int
+  balanceAfter Int
+  createdAt    DateTime @default(now())
+
+  @@index([studentId, createdAt])
+}
